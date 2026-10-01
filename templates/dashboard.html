@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Roblox Unfriend Tool</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+  body { background:#0f1220; color:#e6e6f0; }
+  header { background:#191d33; border-bottom:1px solid #2a2f4d; padding:14px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; position:sticky; top:0; z-index:10; }
+  header b { font-size:16px; }
+  header .me { color:#8b90b3; font-size:13px; }
+  header .me span { color:#e6e6f0; font-weight:600; }
+  .spacer { flex:1; }
+  a.logout { color:#ff8fab; text-decoration:none; font-size:13px; }
+  .toolbar { background:#141830; border-bottom:1px solid #2a2f4d; padding:12px 22px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; position:sticky; top:57px; z-index:9; }
+  .toolbar input[type=text] { background:#0f1220; border:1px solid #2a2f4d; color:#e6e6f0; border-radius:8px; padding:10px 14px; font-size:13px; width:260px; outline:none; }
+  .toolbar input[type=text]:focus { border-color:#5865f2; }
+  .btn { background:#232848; color:#e6e6f0; border:1px solid #2a2f4d; border-radius:8px; padding:9px 14px; font-size:12.5px; cursor:pointer; }
+  .btn:hover { background:#2b3158; }
+  .btn.danger { background:#e0245e; border-color:#e0245e; color:#fff; font-weight:700; }
+  .btn.danger:hover { background:#c81e53; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .count { font-size:12.5px; color:#8b90b3; margin-left:auto; }
+  .count b { color:#fff; }
+  main { max-width:820px; margin:0 auto; padding:18px 16px 120px; }
+  .row { display:flex; align-items:center; gap:12px; background:#191d33; border:1px solid #232848; border-radius:12px; padding:10px 14px; margin-bottom:8px; }
+  .row img { width:40px; height:40px; border-radius:50%; background:#0f1220; }
+  .row .nm { flex:1; min-width:0; }
+  .row .nm b { display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .nm span { font-size:12px; color:#8b90b3; }
+  .row.prot { border-color:#f5a62355; background:#1f1c2e; }
+  .prot-btn { background:none; border:1px solid #2a2f4d; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; color:#8b90b3; }
+  .prot-btn.on { border-color:#f5a623; color:#f5a623; }
+  input.sel { width:18px; height:18px; accent-color:#5865f2; }
+  #progress { position:fixed; bottom:0; left:0; right:0; background:#191d33; border-top:1px solid #2a2f4d; padding:14px 22px; display:none; }
+  #progress .bar { height:8px; background:#0f1220; border-radius:99px; overflow:hidden; margin-top:8px; }
+  #progress .fill { height:100%; width:0%; background:linear-gradient(90deg,#5865f2,#9aa2ff); transition:width .3s; }
+  #progress .txt { font-size:13px; color:#8b90b3; }
+  .note { font-size:12px; color:#8b90b3; padding:8px 4px 14px; }
+</style>
+</head>
+<body>
+<header>
+  <b>🧹 Unfriend Tool</b>
+  <div class="me">Logged in as <span>{{ user['name'] }}</span> (ID: {{ user['id'] }})</div>
+  <div class="spacer"></div>
+  <a class="logout" href="/logout">Logout ✖</a>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="🔍 Filter by name / username..." oninput="applyFilter()">
+  <button class="btn" onclick="selectFiltered(true)">☑ Select All (filtered)</button>
+  <button class="btn" onclick="selectFiltered(false)">☐ Deselect</button>
+  <button class="btn" onclick="invertFiltered()">⇄ Invert</button>
+  <div class="count" id="count"></div>
+  <button class="btn danger" id="goBtn" onclick="startUnfriend()">🗑️ Unfriend Selected</button>
+</div>
+
+<main>
+  <div class="note">🔒 Ang mga naka-<b style="color:#f5a623">Protected</b> ay <b>hindi kailanman</b> ma-uunfriend kahit naka-select all pa. Total friends: <b>{{ friends|length }}</b></div>
+  <div id="list">
+    {% for f in friends %}
+    <div class="row {% if f.id in protected %}prot{% endif %}" data-id="{{ f.id }}"
+         data-search="{{ (f.name ~ ' ' ~ f.displayName)|lower|e }}"
+         data-prot="{% if f.id in protected %}1{% else %}0{% endif %}">
+      <input type="checkbox" class="sel" {% if f.id in protected %}disabled{% endif %}>
+      <img src="{{ pics.get(f.id, '') }}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="nm"><b>{{ f.displayName }}</b><span>@{{ f.name }} · ID {{ f.id }}</span></div>
+      <button class="prot-btn {% if f.id in protected %}on{% endif %}" onclick="toggleProtect(this, {{ f.id }})">
+        {% if f.id in protected %}🔒 Protected{% else %}🛡️ Protect{% endif %}
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</main>
+
+<div id="progress">
+  <div class="txt" id="progTxt">Working...</div>
+  <div class="bar"><div class="fill" id="progFill"></div></div>
+</div>
+
+<script>
+function applyFilter() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  let vis = 0;
+  document.querySelectorAll('.row').forEach(r => {
+    const show = !q || r.dataset.search.includes(q);
+    r.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  updateCount();
+}
+function visibleRows() { return [...document.querySelectorAll('.row')].filter(r => r.style.display !== 'none'); }
+function selectFiltered(v) { visibleRows().forEach(r => { const c = r.querySelector('.sel'); if (!c.disabled) c.checked = v; }); updateCount(); }
+function invertFiltered() { visibleRows().forEach(r => { const c = r.querySelector('.sel'); if (!c.disabled) c.checked = !c.checked; }); updateCount(); }
+function updateCount() {
+  let sel = 0, prot = 0;
+  document.querySelectorAll('.row').forEach(r => {
+    if (r.dataset.prot === '1') prot++;
+    const c = r.querySelector('.sel');
+    if (c.checked && r.dataset.prot !== '1') sel++;
+  });
+  document.getElementById('count').innerHTML = `<b>${sel}</b> selected &nbsp;•&nbsp; 🔒 <b>${prot}</b> protected`;
+  document.getElementById('goBtn').textContent = `🗑️ Unfriend Selected (${sel})`;
+}
+function toggleProtect(btn, id) {
+  const row = btn.closest('.row');
+  const on = row.dataset.prot !== '1';
+  fetch('/api/protect', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, on})})
+    .then(() => {
+      row.dataset.prot = on ? '1' : '0';
+      row.classList.toggle('prot', on);
+      btn.classList.toggle('on', on);
+      btn.innerHTML = on ? '🔒 Protected' : '🛡️ Protect';
+      const c = row.querySelector('.sel');
+      c.disabled = on;
+      if (on) c.checked = false;
+      updateCount();
+    });
+}
+async function startUnfriend() {
+  const ids = [...document.querySelectorAll('.row')].filter(r =>
+    r.querySelector('.sel').checked && r.dataset.prot !== '1').map(r => +r.dataset.id);
+  if (!ids.length) { alert('Walang naka-select na friends.'); return; }
+  if (!confirm(`Sigurado ka bang i-unfriend ang ${ids.length} friends? Hindi na ito maibabalik.`)) return;
+
+  const goBtn = document.getElementById('goBtn');
+  goBtn.disabled = true;
+  const prog = document.getElementById('progress');
+  prog.style.display = 'block';
+  let done = 0, failed = 0;
+  const batch = 10;
+  for (let i = 0; i < ids.length; i += batch) {
+    const chunk = ids.slice(i, i + batch);
+    try {
+      const r = await fetch('/api/unfriend', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ids: chunk})});
+      const d = await r.json();
+      done += (d.unfriended || []).length;
+      failed += (d.failed || []).length;
+    } catch { failed += chunk.length; }
+    const pct = Math.round(((i + chunk.length) / ids.length) * 100);
+    document.getElementById('progFill').style.width = pct + '%';
+    document.getElementById('progTxt').textContent = `Unfriending... ${Math.min(i + chunk.length, ids.length)}/${ids.length} (${done} ok, ${failed} failed)`;
+  }
+  document.getElementById('progTxt').textContent = `✅ Tapos na! ${done} na-unfriend${failed ? `, ${failed} failed (baka wala na silang friend / invalid)` : ''}.`;
+  setTimeout(() => location.reload(), 2500);
+}
+updateCount();
+</script>
+</body>
+</html>

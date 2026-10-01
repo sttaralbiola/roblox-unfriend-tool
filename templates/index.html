@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox Unfriend Tool — Login</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
+  body { background:#0f1220; color:#e6e6f0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .card { background:#191d33; border:1px solid #2a2f4d; border-radius:16px; padding:36px; width:min(440px,92vw); box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  h1 { font-size:22px; margin-bottom:6px; }
+  .sub { color:#8b90b3; font-size:13px; margin-bottom:22px; }
+  label { font-size:12px; color:#8b90b3; text-transform:uppercase; letter-spacing:.5px; }
+  .inp-wrap { position:relative; margin-top:6px; }
+  input[type=text], input[type=password] { width:100%; background:#0f1220; border:1px solid #2a2f4d; color:#e6e6f0; border-radius:10px; padding:13px 44px 13px 14px; font-size:13px; outline:none; }
+  input:focus { border-color:#5865f2; }
+  .eye { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; color:#8b90b3; }
+  button.go { width:100%; margin-top:16px; background:#5865f2; color:#fff; border:none; border-radius:10px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; }
+  button.go:hover { background:#4752c4; }
+  .err { background:#3a1620; border:1px solid #e0245e55; color:#ff8fab; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; }
+  .warn { margin-top:20px; background:#221a10; border:1px solid #f5a62333; color:#f0c37a; border-radius:10px; padding:12px 14px; font-size:12px; line-height:1.5; }
+  code { background:#0f1220; padding:2px 6px; border-radius:6px; font-size:11px; color:#9aa2ff; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧹 Roblox Unfriend Tool</h1>
+    <div class="sub">I-login gamit ang iyong sariling .ROBLOSECURITY cookie.</div>
+
+    {% if error %}
+    <div class="err">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <label>Roblox Cookie (.ROBLOSECURITY)</label>
+      <div class="inp-wrap">
+        <input type="password" id="cookie" name="cookie" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..." autocomplete="off" required>
+        <button type="button" class="eye" onclick="toggle()">👁️</button>
+      </div>
+      <button class="go" type="submit">Verify & Login →</button>
+    </form>
+
+    <div class="warn">
+      ⚠️ <b>Paalala:</b> Ang Roblox cookie ay <b>buong access sa account mo</b> — parang password.
+      Make sure na sa <code>https</code> site ito nag-ra-run, huwag ibahagi sa kahit sino,
+      at i-delete ang service sa Render pagkatapos mong gamitin.
+    </div>
+  </div>
+  <script>
+    function toggle() {
+      const i = document.getElementById('cookie');
+      i.type = i.type === 'password' ? 'text' : 'password';
+    }
+  </script>
+</body>
+</html>
